@@ -10,6 +10,8 @@ struct PeInfo {
     std::wstring error;
 };
 PeInfo InspectPe(const std::filesystem::path& path);
+// Signature verification is optional because it is much slower during a
+// folder-wide import aggregation.
 PeInfo InspectPe(const std::filesystem::path& path, bool verify_signature);
 std::wstring DescribePe(const PeInfo& info);
 }  // namespace folder_explorer

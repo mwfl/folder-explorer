@@ -31,7 +31,7 @@ cmake --build --preset vs2026-x64-debug
 ctest --preset vs2026-x64-debug
 ```
 
-For a standalone clone, use Visual Studio 2022 or configure manually with `FOLDER_EXPLORER_USE_LOCAL_MWFL=OFF`; CMake fetches the pinned mwfl v0.1.0 release.
+For a standalone clone, use Visual Studio 2022 or configure manually with `FOLDER_EXPLORER_USE_LOCAL_MWFL=OFF`; CMake fetches the pinned mwfl v0.1.2 release.
 
 ## AI setup
 

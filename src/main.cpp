@@ -89,6 +89,7 @@ class FileListModel final : public mwfl::VirtualListModel {
     }
 
    private:
+    // The immutable scan owns entries; rows_ is only a filtered index projection.
     std::shared_ptr<const folder_explorer::ScanResult> result_;
     std::vector<std::size_t> rows_;
 };
@@ -96,6 +97,7 @@ class FileListModel final : public mwfl::VirtualListModel {
 class MainWindow final : public mwfl::WindowBase {
    public:
     ~MainWindow() noexcept override {
+        // Join before HWND teardown so no worker can post into a dead window.
         cancel_.store(true);
         if (worker_.joinable()) worker_.join();
     }

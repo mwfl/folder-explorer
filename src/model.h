@@ -8,6 +8,7 @@
 #include <vector>
 
 namespace folder_explorer {
+// search_path is a normalized projection used to filter a snapshot cheaply.
 struct FileEntry {
     std::filesystem::path relative_path;
     std::wstring search_path;
@@ -22,6 +23,7 @@ struct ExtensionSummary {
     std::uintmax_t bytes = 0;
 };
 struct ScanOptions {
+    // Reaching the cap returns a usable partial result with limit_reached set.
     std::size_t item_limit = 100000;
     bool include_directories = true;
 };
@@ -33,6 +35,8 @@ struct ScanResult {
     bool cancelled = false, limit_reached = false;
 };
 using Progress = std::function<void(std::size_t, std::wstring_view)>;
+// Synchronous worker operation. Progress stays off the UI thread; directory
+// symlinks are inventoried but not traversed, preventing cycles.
 ScanResult ScanFolder(const std::filesystem::path&, ScanOptions,
                       const std::atomic_bool* cancel = nullptr, Progress = {});
 bool MatchesFilter(const FileEntry&, std::wstring_view filter);
