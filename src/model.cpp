@@ -42,6 +42,7 @@ ScanResult ScanFolder(const std::filesystem::path& root, ScanOptions options,
         }
         FileEntry entry;
         entry.relative_path = it->path().lexically_relative(root);
+        entry.search_path = Lower(entry.relative_path.generic_wstring());
         entry.symlink = std::filesystem::is_symlink(status);
         entry.directory = it->is_directory(error);
         if (error) {
@@ -86,8 +87,15 @@ ScanResult ScanFolder(const std::filesystem::path& root, ScanOptions options,
 }
 bool MatchesFilter(const FileEntry& entry, std::wstring_view filter) {
     if (filter.empty()) return true;
-    return Lower(entry.relative_path.generic_wstring()).find(Lower(std::wstring(filter))) !=
-           std::wstring::npos;
+    return MatchesNormalizedFilter(entry, NormalizeFilter(filter));
+}
+bool MatchesNormalizedFilter(const FileEntry& entry, std::wstring_view normalized_filter) {
+    if (normalized_filter.empty()) return true;
+    const auto& path = entry.search_path.empty() ? entry.relative_path.native() : entry.search_path;
+    return path.find(normalized_filter) != std::wstring::npos;
+}
+std::wstring NormalizeFilter(std::wstring_view filter) {
+    return Lower(std::wstring(filter));
 }
 std::wstring FormatBytes(std::uintmax_t bytes) {
     if (bytes >= 1024ull * 1024 * 1024)

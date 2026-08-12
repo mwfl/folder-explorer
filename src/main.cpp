@@ -45,9 +45,11 @@ class FileListModel final : public mwfl::VirtualListModel {
     void Set(std::shared_ptr<const folder_explorer::ScanResult> result, std::wstring filter) {
         result_ = std::move(result);
         rows_.clear();
+        const auto normalized = folder_explorer::NormalizeFilter(filter);
         if (result_)
             for (std::size_t i = 0; i < result_->entries.size(); ++i)
-                if (folder_explorer::MatchesFilter(result_->entries[i], filter)) rows_.push_back(i);
+                if (folder_explorer::MatchesNormalizedFilter(result_->entries[i], normalized))
+                    rows_.push_back(i);
     }
     std::size_t GetRowCount() const noexcept override { return rows_.size(); }
     std::size_t VisibleCount() const noexcept { return rows_.size(); }

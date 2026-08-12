@@ -10,6 +10,7 @@
 namespace folder_explorer {
 struct FileEntry {
     std::filesystem::path relative_path;
+    std::wstring search_path;
     std::uintmax_t size = 0;
     std::filesystem::file_time_type modified{};
     bool directory = false;
@@ -35,5 +36,7 @@ using Progress = std::function<void(std::size_t, std::wstring_view)>;
 ScanResult ScanFolder(const std::filesystem::path&, ScanOptions,
                       const std::atomic_bool* cancel = nullptr, Progress = {});
 bool MatchesFilter(const FileEntry&, std::wstring_view filter);
+bool MatchesNormalizedFilter(const FileEntry&, std::wstring_view normalized_filter);
+std::wstring NormalizeFilter(std::wstring_view filter);
 std::wstring FormatBytes(std::uintmax_t bytes);
 }  // namespace folder_explorer

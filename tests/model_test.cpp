@@ -1,5 +1,6 @@
 #include "../src/model.h"
 #include <windows.h>
+#include <chrono>
 #include <fstream>
 #include <iostream>
 #include "../src/pe.h"
@@ -35,6 +36,18 @@ int wmain() {
     const auto fast_pe = folder_explorer::InspectPe(executable, false);
     if (!fast_pe.is_pe || fast_pe.signature_status != L"Not checked during folder summary")
         return 6;
+    std::vector<folder_explorer::FileEntry> many(100000);
+    for (std::size_t i = 0; i < many.size(); ++i) {
+        many[i].relative_path = L"bin/component-" + std::to_wstring(i) + L".dll";
+        many[i].search_path = folder_explorer::NormalizeFilter(many[i].relative_path.native());
+    }
+    const auto filter = folder_explorer::NormalizeFilter(L"COMPONENT-99999");
+    const auto started = std::chrono::steady_clock::now();
+    const auto matches = std::ranges::count_if(many, [&](const auto& entry) {
+        return folder_explorer::MatchesNormalizedFilter(entry, filter);
+    });
+    const auto elapsed = std::chrono::steady_clock::now() - started;
+    if (matches != 1 || elapsed > std::chrono::seconds(2)) return 7;
     std::filesystem::remove_all(root, ec);
     std::wcout << L"folder explorer model tests passed\n";
     return 0;
