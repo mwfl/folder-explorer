@@ -32,17 +32,17 @@ For a standalone clone, use Visual Studio 2022 or configure manually with `FOLDE
 
 ## AI setup
 
-Ollama defaults to `http://127.0.0.1:11434` and model `llama3.2`. Start Ollama and ensure that model exists, select a file, then choose **AI summary**.
+Ollama defaults to `http://127.0.0.1:11434` and model `llama3.2`. Start Ollama and ensure that model exists, select a file, then choose **Ask AI**.
 
 For OpenAI-compatible services, toggle the provider, enter the HTTPS host, model, and key. A host ending in `/v1` and a bare API host are both accepted. The key is deliberately not persisted.
 
 ## Quick workflow
 
-1. Choose **Open folder…** or drop a directory onto the window.
+1. Choose **Open…** or drop a directory onto the window.
 2. Type any part of a relative path to filter the flattened file list.
-3. Select an EXE or DLL and choose **Inspect PE** to see version metadata, architecture, signature status, and imported libraries.
-4. Choose **Search web**, **Reveal**, or **Open PE tool**. The first PE-tool use opens a picker for tools such as PE-bear, Dependencies, or PE Explorer.
-5. Optionally configure Ollama or an OpenAI-compatible endpoint and choose **AI summary**. This is the only action that transmits metadata externally.
+3. Select an EXE or DLL and choose **Inspect** to see version metadata, architecture, signature status, and imported libraries.
+4. Choose **Search**, **Reveal**, or **PE tool…**. The first PE-tool use opens a picker for tools such as PE-bear, Dependencies, or PE Explorer.
+5. Optionally configure Ollama or an OpenAI-compatible endpoint and choose **Ask AI**. This is the only action that transmits metadata externally.
 
 ## Large folders
 

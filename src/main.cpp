@@ -87,16 +87,16 @@ class MainWindow final : public mwfl::WindowBase {
     void BuildUI() override {
         SetTitle(L"Folder Explorer — understand an installation folder");
         mwfl::ControlHost ui{*this};
-        ui.Add(open_, kOpen, L"Open folder…");
+        ui.Add(open_, kOpen, L"Open…");
         ui.Add(cancel_button_, kCancel, L"Cancel");
-        ui.Add(continue_button_, kContinue, L"Continue to 500k");
+        ui.Add(continue_button_, kContinue, L"Continue: 500k");
         ui.Add(filter_, kFilter, L"");
-        ui.Add(inspect_, kInspect, L"Inspect PE");
-        ui.Add(google_, kGoogle, L"Search web");
-        ui.Add(tool_, kTool, L"Open PE tool");
+        ui.Add(inspect_, kInspect, L"Inspect");
+        ui.Add(google_, kGoogle, L"Search");
+        ui.Add(tool_, kTool, L"PE tool…");
         ui.Add(reveal_, kReveal, L"Reveal");
-        ui.Add(ai_, kAi, L"AI summary");
-        ui.Add(provider_, kProvider, L"Use OpenAI-compatible");
+        ui.Add(ai_, kAi, L"Ask AI");
+        ui.Add(provider_, kProvider, L"AI: Ollama");
         ui.Add(host_, L"http://127.0.0.1:11434");
         ui.Add(model_name_, L"llama3.2");
         mwfl::TextBoxOptions key_options;
@@ -167,6 +167,7 @@ class MainWindow final : public mwfl::WindowBase {
                            mwfl::Stretch()));
         cancel_button_.SetEnabled(false);
         continue_button_.SetEnabled(false);
+        SetFileActionsEnabled(false);
         mwfl::EnableFileDrop(GetHwnd());
         mwfl::ApplyWindowAppearance(GetHwnd());
     }
@@ -212,9 +213,9 @@ class MainWindow final : public mwfl::WindowBase {
             return mwfl::EventResult::Handled();
         }
         if (e.IsClicked(provider_)) {
-            provider_.SetText(provider_.GetText().find(L"OpenAI") != std::wstring::npos
-                                  ? L"Use Ollama"
-                                  : L"Use OpenAI-compatible");
+            provider_.SetText(provider_.GetText().find(L"Ollama") != std::wstring::npos
+                                  ? L"AI: OpenAI"
+                                  : L"AI: Ollama");
             return mwfl::EventResult::Handled();
         }
         return mwfl::EventResult::Propagate();
@@ -253,6 +254,7 @@ class MainWindow final : public mwfl::WindowBase {
         try {
             std::optional<folder_explorer::ScanResult> scan;
             std::optional<folder_explorer::AiResponse> ai;
+            std::optional<std::wstring> detail;
             std::wstring progress, failure;
             {
                 std::scoped_lock lock(mutex_);
@@ -260,6 +262,8 @@ class MainWindow final : public mwfl::WindowBase {
                 pending_scan_.reset();
                 ai = std::move(pending_ai_);
                 pending_ai_.reset();
+                detail = std::move(pending_detail_);
+                pending_detail_.reset();
                 progress = std::move(progress_);
                 progress_.clear();
                 failure = std::move(pending_failure_);
@@ -270,13 +274,16 @@ class MainWindow final : public mwfl::WindowBase {
                 summary_.SetText(failure);
                 detail_.SetText(failure);
             } else if (scan) {
-                FinishWorker();
                 result_ = std::make_shared<folder_explorer::ScanResult>(std::move(*scan));
+                FinishWorker();
                 ApplyFilter();
                 ShowSummary();
             } else if (ai) {
                 FinishWorker();
                 detail_.SetText(ai->error.empty() ? ai->text : ai->error);
+            } else if (detail) {
+                FinishWorker();
+                detail_.SetText(*detail);
             } else if (!progress.empty())
                 summary_.SetText(progress);
         } catch (...) {
@@ -291,16 +298,25 @@ class MainWindow final : public mwfl::WindowBase {
         busy_ = false;
         open_.SetEnabled(true);
         cancel_button_.SetEnabled(false);
-        ai_.SetEnabled(true);
+        SetFileActionsEnabled(result_ != nullptr);
+    }
+    void SetFileActionsEnabled(bool enabled) {
+        inspect_.SetEnabled(enabled);
+        google_.SetEnabled(enabled);
+        tool_.SetEnabled(enabled);
+        reveal_.SetEnabled(enabled);
+        ai_.SetEnabled(enabled);
     }
     void StartScan(std::filesystem::path root, std::size_t limit) {
         if (busy_) return;
         if (worker_.joinable()) worker_.join();
         root_ = std::move(root);
+        result_.reset();
+        ApplyFilter();
         cancel_.store(false);
         busy_ = true;
         open_.SetEnabled(false);
-        ai_.SetEnabled(false);
+        SetFileActionsEnabled(false);
         cancel_button_.SetEnabled(true);
         continue_button_.SetEnabled(false);
         summary_.SetText(L"Scanning on a worker thread…");
@@ -366,11 +382,26 @@ class MainWindow final : public mwfl::WindowBase {
         return e ? root_ / e->relative_path : std::filesystem::path{};
     }
     void InspectSelected() {
+        if (busy_) return;
         const auto path = SelectedPath();
         std::error_code ec;
         if (path.empty() || std::filesystem::is_directory(path, ec) || ec) return;
-        const auto info = folder_explorer::InspectPe(path);
-        detail_.SetText(path.wstring() + L"\r\n" + folder_explorer::DescribePe(info));
+        busy_ = true;
+        open_.SetEnabled(false);
+        SetFileActionsEnabled(false);
+        detail_.SetText(L"Inspecting PE metadata and signature…");
+        const auto wake = GetWakeup();
+        worker_ = std::jthread([this, path, wake] {
+            try {
+                const auto info = folder_explorer::InspectPe(path);
+                std::scoped_lock lock(mutex_);
+                pending_detail_ = path.wstring() + L"\r\n" + folder_explorer::DescribePe(info);
+            } catch (...) {
+                std::scoped_lock lock(mutex_);
+                pending_failure_ = L"PE inspection failed safely.";
+            }
+            wake.TryWake();
+        });
     }
     void SearchSelected() {
         const auto path = SelectedPath();
@@ -410,9 +441,8 @@ class MainWindow final : public mwfl::WindowBase {
         if (busy_) return;
         const auto path = SelectedPath();
         if (path.empty() || !result_) return;
-        const auto info = folder_explorer::InspectPe(path);
         folder_explorer::AiRequest request;
-        request.provider = provider_.GetText().find(L"OpenAI") != std::wstring::npos
+        request.provider = provider_.GetText().find(L"Ollama") != std::wstring::npos
                                ? folder_explorer::AiProvider::ollama
                                : folder_explorer::AiProvider::openai_compatible;
         request.host = host_.GetText();
@@ -421,18 +451,18 @@ class MainWindow final : public mwfl::WindowBase {
         request.prompt = std::format(
             L"Explain what this file is likely used for in concise plain language. "
             L"Do not claim certainty beyond metadata.\nFile: {}\nFolder summary: "
-            L"{} files, {}, top extensions: {}\nPE metadata:\n{}",
+            L"{} files, {}, top extensions: {}\nPE metadata:\n",
             path.filename().wstring(), result_->files,
-            folder_explorer::FormatBytes(result_->total_bytes), extensions_.GetText(),
-            folder_explorer::DescribePe(info));
+            folder_explorer::FormatBytes(result_->total_bytes), extensions_.GetText());
         busy_ = true;
         open_.SetEnabled(false);
-        ai_.SetEnabled(false);
+        SetFileActionsEnabled(false);
         cancel_button_.SetEnabled(false);
         detail_.SetText(L"Waiting for AI response…");
         const auto wake = GetWakeup();
-        worker_ = std::jthread([this, request = std::move(request), wake] {
+        worker_ = std::jthread([this, path, request = std::move(request), wake]() mutable {
             try {
+                request.prompt += folder_explorer::DescribePe(folder_explorer::InspectPe(path));
                 auto response = folder_explorer::GenerateSummary(request);
                 std::scoped_lock lock(mutex_);
                 pending_ai_ = std::move(response);
@@ -450,6 +480,7 @@ class MainWindow final : public mwfl::WindowBase {
     std::mutex mutex_;
     std::optional<folder_explorer::ScanResult> pending_scan_;
     std::optional<folder_explorer::AiResponse> pending_ai_;
+    std::optional<std::wstring> pending_detail_;
     std::wstring progress_, pending_failure_;
     std::jthread worker_;
     bool busy_ = false;
