@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.21)
-project(folder_explorer VERSION 0.1.0 LANGUAGES CXX)
+project(folder_explorer VERSION 0.1.1 LANGUAGES CXX)
 
 include(FetchContent)
 option(FOLDER_EXPLORER_USE_LOCAL_MWFL "Use a local mwfl checkout" OFF)
@@ -11,7 +11,7 @@ if(FOLDER_EXPLORER_USE_LOCAL_MWFL)
 else()
     FetchContent_Declare(mwfl
         GIT_REPOSITORY https://github.com/mwfl/mwfl.git
-        GIT_TAG v0.1.0)
+        GIT_TAG v0.1.2)
     set(MWFL_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
     set(MWFL_BUILD_TESTS OFF CACHE BOOL "" FORCE)
     FetchContent_MakeAvailable(mwfl)
@@ -19,7 +19,7 @@ endif()
 
 add_executable(folder-explorer WIN32
     src/main.cpp src/model.cpp src/model.h src/pe.cpp src/pe.h src/ai.cpp src/ai.h
-    src/folder-explorer.rc app.manifest)
+    src/folder-explorer.rc src/resource.h app-icon.ico app.manifest)
 target_link_libraries(folder-explorer PRIVATE mwfl::mwfl wintrust version crypt32 winhttp shell32)
 target_compile_features(folder-explorer PRIVATE cxx_std_20)
 target_compile_definitions(folder-explorer PRIVATE UNICODE _UNICODE WIN32_LEAN_AND_MEAN NOMINMAX)

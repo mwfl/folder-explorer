@@ -12,6 +12,7 @@
 #include "ai.h"
 #include "model.h"
 #include "pe.h"
+#include "resource.h"
 
 using mwfl::operator""_dip;
 namespace {
@@ -193,7 +194,7 @@ class MainWindow final : public mwfl::WindowBase {
         continue_button_.SetEnabled(false);
         SetFileActionsEnabled(false);
         mwfl::EnableFileDrop(GetHwnd());
-        mwfl::ApplyWindowAppearance(GetHwnd());
+        SetAppearance({});
         if (const auto initial = InitialFolderFromCommandLine(); !initial.empty())
             StartScan(initial, 100000);
     }
@@ -272,10 +273,6 @@ class MainWindow final : public mwfl::WindowBase {
             std::error_code ec;
             if (!files.empty() && std::filesystem::is_directory(files[0], ec) && !ec)
                 StartScan(files[0], 100000);
-            return mwfl::EventResult::Handled();
-        }
-        if (e.id == WM_THEMECHANGED || e.id == WM_SETTINGCHANGE) {
-            mwfl::ApplyWindowAppearance(GetHwnd());
             return mwfl::EventResult::Handled();
         }
         return mwfl::EventResult::Propagate();
@@ -591,9 +588,12 @@ class MainWindow final : public mwfl::WindowBase {
 };
 }  // namespace
 int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int show) {
+    const HICON icon = ::LoadIconW(instance, MAKEINTRESOURCEW(IDI_FOLDER_EXPLORER));
     return mwfl::RunApplication<MainWindow>(
         instance, show,
         {.title = L"Folder Explorer",
          .initial_bounds = {{30.0_dip, 30.0_dip}, {1500.0_dip, 900.0_dip}},
-         .use_default_bounds = false});
+         .use_default_bounds = false,
+         .icon = icon,
+         .small_icon = icon});
 }
