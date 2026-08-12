@@ -1,0 +1,50 @@
+cmake_minimum_required(VERSION 3.21)
+project(folder_explorer VERSION 0.1.0 LANGUAGES CXX)
+
+include(FetchContent)
+option(FOLDER_EXPLORER_USE_LOCAL_MWFL "Use a local mwfl checkout" OFF)
+set(FOLDER_EXPLORER_MWFL_SOURCE_DIR "../mwfl" CACHE PATH "Local mwfl source directory")
+if(FOLDER_EXPLORER_USE_LOCAL_MWFL)
+    set(MWFL_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+    set(MWFL_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+    add_subdirectory("${FOLDER_EXPLORER_MWFL_SOURCE_DIR}" "${CMAKE_BINARY_DIR}/mwfl")
+else()
+    FetchContent_Declare(mwfl
+        GIT_REPOSITORY https://github.com/mwfl/mwfl.git
+        GIT_TAG v0.1.0)
+    set(MWFL_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+    set(MWFL_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+    FetchContent_MakeAvailable(mwfl)
+endif()
+
+add_executable(folder-explorer WIN32
+    src/main.cpp src/model.cpp src/model.h src/pe.cpp src/pe.h src/ai.cpp src/ai.h
+    src/folder-explorer.rc app.manifest)
+target_link_libraries(folder-explorer PRIVATE mwfl::mwfl wintrust version crypt32 winhttp shell32)
+target_compile_features(folder-explorer PRIVATE cxx_std_20)
+target_compile_definitions(folder-explorer PRIVATE UNICODE _UNICODE WIN32_LEAN_AND_MEAN NOMINMAX)
+if(MSVC)
+    target_compile_options(folder-explorer PRIVATE /W4 /WX /permissive- /EHsc /utf-8)
+endif()
+
+enable_testing()
+add_executable(folder-explorer-tests tests/model_test.cpp src/model.cpp src/model.h src/pe.cpp src/pe.h)
+target_link_libraries(folder-explorer-tests PRIVATE wintrust version crypt32)
+target_compile_features(folder-explorer-tests PRIVATE cxx_std_20)
+target_compile_definitions(folder-explorer-tests PRIVATE UNICODE _UNICODE WIN32_LEAN_AND_MEAN NOMINMAX)
+if(MSVC)
+    target_compile_options(folder-explorer-tests PRIVATE /W4 /WX /permissive- /EHsc /utf-8)
+endif()
+add_test(NAME folder-explorer.model COMMAND folder-explorer-tests)
+
+add_executable(folder-explorer-ai-tests tests/ai_test.cpp src/ai.cpp src/ai.h)
+target_link_libraries(folder-explorer-ai-tests PRIVATE winhttp ws2_32)
+target_compile_features(folder-explorer-ai-tests PRIVATE cxx_std_20)
+target_compile_definitions(folder-explorer-ai-tests PRIVATE UNICODE _UNICODE WIN32_LEAN_AND_MEAN NOMINMAX)
+if(MSVC)
+    target_compile_options(folder-explorer-ai-tests PRIVATE /W4 /WX /permissive- /EHsc /utf-8)
+endif()
+add_test(NAME folder-explorer.ai COMMAND folder-explorer-ai-tests)
+
+install(TARGETS folder-explorer RUNTIME DESTINATION bin COMPONENT Application)
+install(FILES README.md LICENSE DESTINATION . COMPONENT Application)

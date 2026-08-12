@@ -1,0 +1,5 @@
+/build/
+/.vs/
+/.cache/
+*.user
+*.suo
