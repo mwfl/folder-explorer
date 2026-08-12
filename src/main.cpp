@@ -15,6 +15,16 @@
 
 using mwfl::operator""_dip;
 namespace {
+std::filesystem::path InitialFolderFromCommandLine() {
+    int count = 0;
+    const auto arguments = std::unique_ptr<wchar_t*, decltype(&::LocalFree)>(
+        ::CommandLineToArgvW(::GetCommandLineW(), &count), &::LocalFree);
+    if (!arguments || count < 2) return {};
+    std::error_code error;
+    const std::filesystem::path path = arguments.get()[1];
+    return std::filesystem::is_directory(path, error) && !error ? path : std::filesystem::path{};
+}
+
 constexpr mwfl::ControlId kOpen{100}, kCancel{101}, kContinue{102}, kFilter{103}, kList{104},
     kInspect{105}, kGoogle{106}, kTool{107}, kReveal{108}, kAi{109}, kProvider{110},
     kDependencies{111};
@@ -102,11 +112,15 @@ class MainWindow final : public mwfl::WindowBase {
         ui.Add(dependencies_, kDependencies, L"Libraries");
         ui.Add(ai_, kAi, L"Ask AI");
         ui.Add(provider_, kProvider, L"AI: Ollama");
+        ui.Add(host_label_, L"Host");
         ui.Add(host_, L"http://127.0.0.1:11434");
+        ui.Add(model_label_, L"Model");
         ui.Add(model_name_, L"llama3.2");
+        ui.Add(key_label_, L"Key");
         mwfl::TextBoxOptions key_options;
         key_options.style |= ES_PASSWORD;
         ui.Add(api_key_, L"", key_options);
+        ui.Add(tool_label_, L"Tool");
         ui.Add(pe_tool_, L"");
         ui.Add(summary_,
                L"Open a folder to scan it recursively. Nothing is "
@@ -158,9 +172,13 @@ class MainWindow final : public mwfl::WindowBase {
                            mwfl::Auto())
                       .Add(mwfl::Row()
                                .Gap(6.0_dip)
+                               .Add(host_label_, mwfl::Auto())
                                .Add(host_, mwfl::Stretch())
+                               .Add(model_label_, mwfl::Auto())
                                .Add(model_name_, mwfl::Fixed(150.0_dip))
+                               .Add(key_label_, mwfl::Auto())
                                .Add(api_key_, mwfl::Fixed(190.0_dip))
+                               .Add(tool_label_, mwfl::Auto())
                                .Add(pe_tool_, mwfl::Stretch()),
                            mwfl::Auto())
                       .Add(summary_, mwfl::Auto())
@@ -176,6 +194,8 @@ class MainWindow final : public mwfl::WindowBase {
         SetFileActionsEnabled(false);
         mwfl::EnableFileDrop(GetHwnd());
         mwfl::ApplyWindowAppearance(GetHwnd());
+        if (const auto initial = InitialFolderFromCommandLine(); !initial.empty())
+            StartScan(initial, 100000);
     }
     mwfl::EventResult OnCommand(const mwfl::CommandEvent& e) override {
         if (e.IsClicked(open_)) {
@@ -362,6 +382,8 @@ class MainWindow final : public mwfl::WindowBase {
         model_->Set(result_, filter_.GetText());
         mwfl::Must(list_.SetVirtualModel(model_), "refresh model");
         list_.RefreshVirtualModel();
+        ::RedrawWindow(list_.GetHwnd(), nullptr, nullptr,
+                       RDW_INVALIDATE | RDW_ERASE | RDW_FRAME | RDW_ALLCHILDREN | RDW_UPDATENOW);
     }
     void ShowSummary() {
         if (!result_) return;
@@ -565,7 +587,7 @@ class MainWindow final : public mwfl::WindowBase {
         dependencies_, ai_, provider_;
     mwfl::TextBox filter_, host_, model_name_, api_key_, pe_tool_, detail_;
     mwfl::ListView list_;
-    mwfl::Label summary_, extensions_;
+    mwfl::Label host_label_, model_label_, key_label_, tool_label_, summary_, extensions_;
 };
 }  // namespace
 int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int show) {

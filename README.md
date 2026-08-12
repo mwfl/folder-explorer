@@ -4,6 +4,8 @@
 
 Folder Explorer is a native Windows application built with [mwfl](https://github.com/mwfl/mwfl) for understanding an unfamiliar installation or application directory.
 
+![Folder Explorer inspecting a native Windows executable](docs/folder-explorer.png)
+
 It recursively inventories a folder without freezing the UI, presents a flat filterable virtual list, summarizes file types and disk usage, inspects PE metadata/imports/Authenticode status, launches an external PE tool, searches the web, and can ask either Ollama or an OpenAI-compatible model to explain a selected file.
 
 ## Initial version
@@ -44,6 +46,8 @@ For OpenAI-compatible services, toggle the provider, enter the HTTPS host, model
 3. Select an EXE or DLL and choose **Inspect** to see version metadata, architecture, signature status, and imported libraries.
 4. Choose **Libraries** for an on-demand folder-wide import summary, or use **Search**, **Reveal**, and **PE tool…** for the selected file. The first PE-tool use opens a picker for tools such as PE-bear, Dependencies, or PE Explorer.
 5. Optionally configure Ollama or an OpenAI-compatible endpoint and choose **Ask AI**. This is the only action that transmits metadata externally.
+
+You can also open a folder directly with `folder-explorer.exe "C:\path\to\an\application"`.
 
 ## Large folders
 
