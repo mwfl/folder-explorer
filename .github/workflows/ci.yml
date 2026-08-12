@@ -12,7 +12,7 @@ jobs:
   build:
     runs-on: windows-2022
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Configure (Visual Studio 2022 x64)
         run: cmake --preset vs2022-x64
       - name: Build
@@ -24,7 +24,7 @@ jobs:
         run: |
           cmake --install build/vs2022-x64 --config Release --prefix package --component Application
           Compress-Archive -Path package/* -DestinationPath folder-explorer-windows-x64.zip
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: folder-explorer-windows-x64
           path: folder-explorer-windows-x64.zip
