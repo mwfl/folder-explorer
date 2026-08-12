@@ -61,6 +61,10 @@ std::wstring VerifySignature(const std::filesystem::path& path, bool& valid) {
 }
 }  // namespace
 PeInfo InspectPe(const std::filesystem::path& path) {
+    return InspectPe(path, true);
+}
+
+PeInfo InspectPe(const std::filesystem::path& path, bool verify_signature) {
     PeInfo out;
     std::ifstream stream(path, std::ios::binary);
     if (!stream) {
@@ -131,7 +135,10 @@ PeInfo InspectPe(const std::filesystem::path& path) {
     out.company = VersionValue(path, L"CompanyName");
     out.product = VersionValue(path, L"ProductName");
     out.version = VersionValue(path, L"FileVersion");
-    out.signature_status = VerifySignature(path, out.signature_valid);
+    if (verify_signature)
+        out.signature_status = VerifySignature(path, out.signature_valid);
+    else
+        out.signature_status = L"Not checked during folder summary";
     return out;
 }
 std::wstring DescribePe(const PeInfo& p) {

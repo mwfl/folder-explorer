@@ -32,6 +32,9 @@ int wmain() {
     ::GetModuleFileNameW(nullptr, executable, MAX_PATH);
     const auto pe = folder_explorer::InspectPe(executable);
     if (!pe.is_pe || pe.machine.empty() || pe.signature_status.empty()) return 5;
+    const auto fast_pe = folder_explorer::InspectPe(executable, false);
+    if (!fast_pe.is_pe || fast_pe.signature_status != L"Not checked during folder summary")
+        return 6;
     std::filesystem::remove_all(root, ec);
     std::wcout << L"folder explorer model tests passed\n";
     return 0;

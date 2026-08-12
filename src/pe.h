@@ -10,5 +10,6 @@ struct PeInfo {
     std::wstring error;
 };
 PeInfo InspectPe(const std::filesystem::path& path);
+PeInfo InspectPe(const std::filesystem::path& path, bool verify_signature);
 std::wstring DescribePe(const PeInfo& info);
 }  // namespace folder_explorer

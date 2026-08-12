@@ -14,6 +14,7 @@ It recursively inventories a folder without freezing the UI, presents a flat fil
 - Case-insensitive relative-path filtering without rescanning.
 - File/folder counts, total bytes, and top extension counts/bytes.
 - PE32/PE32+ architecture, version resources, imported DLL names, and Authenticode verification.
+- On-demand folder-wide imported-library aggregation with cancellation; signatures are deliberately skipped during this summary for speed.
 - Explicit buttons for Explorer reveal, Google search, and a user-configured PE utility.
 - Ollama and OpenAI-compatible summaries. Only the displayed metadata/summary is sent after an explicit click; file bytes are never uploaded.
 - API keys remain memory-only and are not written to disk.
@@ -41,7 +42,7 @@ For OpenAI-compatible services, toggle the provider, enter the HTTPS host, model
 1. Choose **Open…** or drop a directory onto the window.
 2. Type any part of a relative path to filter the flattened file list.
 3. Select an EXE or DLL and choose **Inspect** to see version metadata, architecture, signature status, and imported libraries.
-4. Choose **Search**, **Reveal**, or **PE tool…**. The first PE-tool use opens a picker for tools such as PE-bear, Dependencies, or PE Explorer.
+4. Choose **Libraries** for an on-demand folder-wide import summary, or use **Search**, **Reveal**, and **PE tool…** for the selected file. The first PE-tool use opens a picker for tools such as PE-bear, Dependencies, or PE Explorer.
 5. Optionally configure Ollama or an OpenAI-compatible endpoint and choose **Ask AI**. This is the only action that transmits metadata externally.
 
 ## Large folders

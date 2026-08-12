@@ -1,6 +1,7 @@
 #include <atomic>
 #include <filesystem>
 #include <format>
+#include <map>
 #include <memory>
 #include <mutex>
 #include <mwfl/mwfl.h>
@@ -15,7 +16,8 @@
 using mwfl::operator""_dip;
 namespace {
 constexpr mwfl::ControlId kOpen{100}, kCancel{101}, kContinue{102}, kFilter{103}, kList{104},
-    kInspect{105}, kGoogle{106}, kTool{107}, kReveal{108}, kAi{109}, kProvider{110};
+    kInspect{105}, kGoogle{106}, kTool{107}, kReveal{108}, kAi{109}, kProvider{110},
+    kDependencies{111};
 
 std::wstring UrlEncode(std::wstring_view value) {
     const int size = ::WideCharToMultiByte(CP_UTF8, 0, value.data(), static_cast<int>(value.size()),
@@ -95,6 +97,7 @@ class MainWindow final : public mwfl::WindowBase {
         ui.Add(google_, kGoogle, L"Search");
         ui.Add(tool_, kTool, L"PE tool…");
         ui.Add(reveal_, kReveal, L"Reveal");
+        ui.Add(dependencies_, kDependencies, L"Libraries");
         ui.Add(ai_, kAi, L"Ask AI");
         ui.Add(provider_, kProvider, L"AI: Ollama");
         ui.Add(host_, L"http://127.0.0.1:11434");
@@ -147,6 +150,7 @@ class MainWindow final : public mwfl::WindowBase {
                                .Add(google_, mwfl::Auto())
                                .Add(tool_, mwfl::Auto())
                                .Add(reveal_, mwfl::Auto())
+                               .Add(dependencies_, mwfl::Auto())
                                .Add(ai_, mwfl::Auto())
                                .Add(provider_, mwfl::Auto()),
                            mwfl::Auto())
@@ -206,6 +210,10 @@ class MainWindow final : public mwfl::WindowBase {
         }
         if (e.IsClicked(reveal_)) {
             RevealSelected();
+            return mwfl::EventResult::Handled();
+        }
+        if (e.IsClicked(dependencies_)) {
+            SummarizeDependencies();
             return mwfl::EventResult::Handled();
         }
         if (e.IsClicked(ai_)) {
@@ -305,6 +313,7 @@ class MainWindow final : public mwfl::WindowBase {
         google_.SetEnabled(enabled);
         tool_.SetEnabled(enabled);
         reveal_.SetEnabled(enabled);
+        dependencies_.SetEnabled(enabled);
         ai_.SetEnabled(enabled);
     }
     void StartScan(std::filesystem::path root, std::size_t limit) {
@@ -437,6 +446,72 @@ class MainWindow final : public mwfl::WindowBase {
                                                       nullptr, SW_SHOWNORMAL)) <= 32)
             detail_.SetText(L"Could not start the configured PE tool.");
     }
+    void SummarizeDependencies() {
+        if (busy_ || !result_) return;
+        std::vector<std::filesystem::path> binaries;
+        for (const auto& entry : result_->entries) {
+            if (entry.directory) continue;
+            auto extension = entry.relative_path.extension().wstring();
+            std::ranges::transform(extension, extension.begin(), ::towlower);
+            if (extension == L".exe" || extension == L".dll")
+                binaries.push_back(root_ / entry.relative_path);
+        }
+        if (binaries.empty()) {
+            detail_.SetText(L"No EXE or DLL files were found in this scan.");
+            return;
+        }
+        busy_ = true;
+        cancel_.store(false);
+        open_.SetEnabled(false);
+        SetFileActionsEnabled(false);
+        cancel_button_.SetEnabled(true);
+        detail_.SetText(L"Summarizing imported libraries on a worker thread…");
+        const auto wake = GetWakeup();
+        worker_ = std::jthread([this, binaries = std::move(binaries), wake] {
+            try {
+                std::map<std::wstring, std::size_t, std::less<>> imports;
+                std::size_t inspected = 0, pe_files = 0;
+                for (const auto& path : binaries) {
+                    if (cancel_.load(std::memory_order_relaxed)) break;
+                    const auto info = folder_explorer::InspectPe(path, false);
+                    ++inspected;
+                    if (info.is_pe) {
+                        ++pe_files;
+                        for (auto name : info.imports) {
+                            std::ranges::transform(name, name.begin(), ::towlower);
+                            ++imports[name];
+                        }
+                    }
+                    if (inspected % 32 == 0) {
+                        std::scoped_lock lock(mutex_);
+                        progress_ = std::format(L"Summarizing libraries… {}/{} binaries", inspected,
+                                                binaries.size());
+                        wake.TryWake();
+                    }
+                }
+                std::vector<std::pair<std::wstring, std::size_t>> ranked(imports.begin(),
+                                                                         imports.end());
+                std::ranges::sort(ranked, [](const auto& a, const auto& b) {
+                    return a.second != b.second ? a.second > b.second : a.first < b.first;
+                });
+                std::wstring text = std::format(
+                    L"Folder library summary\r\nInspected: {} of {} EXE/DLL files{}\r\n"
+                    L"PE files: {} · distinct imported libraries: {}\r\n\r\n",
+                    inspected, binaries.size(),
+                    cancel_.load(std::memory_order_relaxed) ? L" (cancelled)" : L"", pe_files,
+                    ranked.size());
+                for (const auto& [name, count] : ranked)
+                    text += std::format(L"  {}  —  used by {} file{}\r\n", name, count,
+                                        count == 1 ? L"" : L"s");
+                std::scoped_lock lock(mutex_);
+                pending_detail_ = std::move(text);
+            } catch (...) {
+                std::scoped_lock lock(mutex_);
+                pending_failure_ = L"Library summary failed safely.";
+            }
+            wake.TryWake();
+        });
+    }
     void StartAi() {
         if (busy_) return;
         const auto path = SelectedPath();
@@ -484,8 +559,8 @@ class MainWindow final : public mwfl::WindowBase {
     std::wstring progress_, pending_failure_;
     std::jthread worker_;
     bool busy_ = false;
-    mwfl::Button open_, cancel_button_, continue_button_, inspect_, google_, tool_, reveal_, ai_,
-        provider_;
+    mwfl::Button open_, cancel_button_, continue_button_, inspect_, google_, tool_, reveal_,
+        dependencies_, ai_, provider_;
     mwfl::TextBox filter_, host_, model_name_, api_key_, pe_tool_, detail_;
     mwfl::ListView list_;
     mwfl::Label summary_, extensions_;
