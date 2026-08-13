@@ -16,11 +16,16 @@ else()
     set(MWFL_BUILD_TESTS OFF CACHE BOOL "" FORCE)
     FetchContent_MakeAvailable(mwfl)
 endif()
+if(TARGET mwfl::ui)
+    set(FOLDER_EXPLORER_MWFL_UI_TARGET mwfl::ui)
+else()
+    set(FOLDER_EXPLORER_MWFL_UI_TARGET mwfl::mwfl)
+endif()
 
 add_executable(folder-explorer WIN32
     src/main.cpp src/model.cpp src/model.h src/pe.cpp src/pe.h src/ai.cpp src/ai.h
     src/folder-explorer.rc src/resource.h app-icon.ico app.manifest)
-target_link_libraries(folder-explorer PRIVATE mwfl::mwfl wintrust version crypt32 winhttp shell32)
+target_link_libraries(folder-explorer PRIVATE ${FOLDER_EXPLORER_MWFL_UI_TARGET} wintrust version crypt32 winhttp shell32)
 target_compile_features(folder-explorer PRIVATE cxx_std_20)
 target_compile_definitions(folder-explorer PRIVATE UNICODE _UNICODE WIN32_LEAN_AND_MEAN NOMINMAX)
 if(MSVC)
