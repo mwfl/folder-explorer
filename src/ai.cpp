@@ -101,12 +101,15 @@ AiResponse GenerateSummary(const AiRequest& request) {
                                        "\",\"messages\":[{\"role\":\"user\",\"content\":\"" +
                                        Escape(request.prompt) + "\"}],\"temperature\":0.2}";
     std::wstring headers = L"Content-Type: application/json\r\n";
-    if (!request.api_key.empty()) headers += L"Authorization: Bearer " + request.api_key + L"\r\n";
+    request.api_key.WithView([&](std::wstring_view key) {
+        if (!key.empty()) headers += L"Authorization: Bearer " + std::wstring(key) + L"\r\n";
+    });
     BOOL ok = call &&
               ::WinHttpSendRequest(call, headers.c_str(), static_cast<DWORD>(-1),
                                    const_cast<char*>(body.data()), static_cast<DWORD>(body.size()),
                                    static_cast<DWORD>(body.size()), 0) &&
               ::WinHttpReceiveResponse(call, nullptr);
+    if (!headers.empty()) ::SecureZeroMemory(headers.data(), headers.size() * sizeof(wchar_t));
     DWORD status = 0, status_size = sizeof(status);
     if (ok && !::WinHttpQueryHeaders(call, WINHTTP_QUERY_STATUS_CODE | WINHTTP_QUERY_FLAG_NUMBER,
                                      WINHTTP_HEADER_NAME_BY_INDEX, &status, &status_size,

@@ -545,7 +545,7 @@ class MainWindow final : public mwfl::WindowBase {
                                : folder_explorer::AiProvider::openai_compatible;
         request.host = host_.GetText();
         request.model = model_name_.GetText();
-        request.api_key = api_key_.GetText();
+        request.api_key = mwfl::SecureString(api_key_.GetText());
         request.prompt = std::format(
             L"Explain what this file is likely used for in concise plain language. "
             L"Do not claim certainty beyond metadata.\nFile: {}\nFolder summary: "

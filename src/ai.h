@@ -1,4 +1,5 @@
 #pragma once
+#include <mwfl/security.h>
 #include <string>
 namespace folder_explorer {
 enum class AiProvider { ollama, openai_compatible };
@@ -7,7 +8,7 @@ struct AiRequest {
     std::wstring host = L"http://127.0.0.1:11434";
     std::wstring model = L"llama3.2";
     // Memory-only credential: callers must not persist or log it.
-    std::wstring api_key;
+    mwfl::SecureString api_key;
     // Constructed from displayed metadata; file bytes are outside this contract.
     std::wstring prompt;
 };

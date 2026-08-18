@@ -1,8 +1,7 @@
 #include "pe.h"
 
+#include <mwfl/deployment.h>
 #include <windows.h>
-#include <softpub.h>
-#include <wintrust.h>
 
 #include <algorithm>
 #include <format>
@@ -41,23 +40,22 @@ std::wstring VersionValue(const std::filesystem::path& path, const wchar_t* name
                : std::wstring{};
 }
 std::wstring VerifySignature(const std::filesystem::path& path, bool& valid) {
-    WINTRUST_FILE_INFO file{sizeof(file)};
-    file.pcwszFilePath = path.c_str();
-    WINTRUST_DATA data{sizeof(data)};
-    data.dwUIChoice = WTD_UI_NONE;
-    data.fdwRevocationChecks = WTD_REVOKE_NONE;
-    data.dwUnionChoice = WTD_CHOICE_FILE;
-    data.pFile = &file;
-    data.dwStateAction = WTD_STATEACTION_VERIFY;
-    GUID policy = WINTRUST_ACTION_GENERIC_VERIFY_V2;
-    const LONG status = ::WinVerifyTrust(nullptr, &policy, &data);
-    data.dwStateAction = WTD_STATEACTION_CLOSE;
-    ::WinVerifyTrust(nullptr, &policy, &data);
-    valid = status == ERROR_SUCCESS;
-    if (valid) return L"Valid Authenticode signature";
-    if (status == TRUST_E_NOSIGNATURE) return L"Not signed";
-    return std::format(L"Signature invalid or unverifiable (0x{:08X})",
-                       static_cast<unsigned long>(status));
+    auto verification = mwfl::VerifyAuthenticode(path, mwfl::RevocationPolicy::Offline);
+    if (!verification) {
+        valid = false;
+        return L"Signature verification failed";
+    }
+    valid = verification.Value().status == mwfl::SignatureStatus::Valid;
+    switch (verification.Value().status) {
+        case mwfl::SignatureStatus::Valid: return L"Valid Authenticode signature";
+        case mwfl::SignatureStatus::Unsigned: return L"Not signed";
+        case mwfl::SignatureStatus::Untrusted: return L"Signature is not trusted";
+        case mwfl::SignatureStatus::RevocationUnavailable:
+            return L"Signature revocation status unavailable";
+        case mwfl::SignatureStatus::Invalid: break;
+    }
+    return std::format(L"Signature invalid (0x{:08X})",
+                       static_cast<unsigned long>(verification.Value().native_status));
 }
 }  // namespace
 PeInfo InspectPe(const std::filesystem::path& path) {
@@ -134,7 +132,12 @@ PeInfo InspectPe(const std::filesystem::path& path, bool verify_signature) {
     out.description = VersionValue(path, L"FileDescription");
     out.company = VersionValue(path, L"CompanyName");
     out.product = VersionValue(path, L"ProductName");
-    out.version = VersionValue(path, L"FileVersion");
+    if (auto version = mwfl::QueryFileVersion(path); version) {
+        out.version = std::format(L"{}.{}.{}.{}", version.Value().major, version.Value().minor,
+                                  version.Value().build, version.Value().revision);
+    } else {
+        out.version = VersionValue(path, L"FileVersion");
+    }
     if (verify_signature)
         out.signature_status = VerifySignature(path, out.signature_valid);
     else
