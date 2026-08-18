@@ -18,11 +18,11 @@ else()
 endif()
 
 add_executable(folder-explorer WIN32
-    src/main.cpp src/model.cpp src/model.h src/pe.cpp src/pe.h src/ai.cpp src/ai.h
+    src/main.cpp update_checker.cpp update_checker.h src/model.cpp src/model.h src/pe.cpp src/pe.h src/ai.cpp src/ai.h
     src/folder-explorer.rc src/resource.h app-icon.ico app.manifest)
-target_link_libraries(folder-explorer PRIVATE mwfl::ui mwfl::deployment mwfl::security version winhttp shell32)
+target_link_libraries(folder-explorer PRIVATE mwfl::ui mwfl::deployment mwfl::security version winhttp shell32 comctl32 advapi32)
 target_compile_features(folder-explorer PRIVATE cxx_std_20)
-target_compile_definitions(folder-explorer PRIVATE UNICODE _UNICODE WIN32_LEAN_AND_MEAN NOMINMAX)
+target_compile_definitions(folder-explorer PRIVATE UNICODE _UNICODE WIN32_LEAN_AND_MEAN NOMINMAX MWFL_APP_VERSION=L\"${PROJECT_VERSION}\")
 if(MSVC)
     target_compile_options(folder-explorer PRIVATE /W4 /WX /permissive- /EHsc /utf-8)
 endif()
@@ -46,5 +46,5 @@ if(MSVC)
 endif()
 add_test(NAME folder-explorer.ai COMMAND folder-explorer-ai-tests)
 
-install(TARGETS folder-explorer RUNTIME DESTINATION bin COMPONENT Application)
+install(TARGETS folder-explorer RUNTIME DESTINATION . COMPONENT Application)
 install(FILES README.md LICENSE DESTINATION . COMPONENT Application)

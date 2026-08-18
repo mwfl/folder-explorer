@@ -56,3 +56,11 @@ The first scan stops at 100,000 visible entries and keeps the partial summary us
 ## Privacy and trust
 
 Folder scans and PE inspection are local. Web search opens the browser with the selected filename. AI requests contain the filename, folder aggregate, and PE metadata only. PE descriptions and AI responses are informational and may be incomplete; Authenticode validity is reported separately from inferred purpose.
+
+## Updates and Portable releases
+
+The app checks the latest stable GitHub Release at most once per day. Use **Settings > Automatically Check for Updates** to disable or re-enable checks, or **Check for Updates** to run one manually. An available update can open the official Portable release, be deferred for three days or one week, or dismissed until the next day. Tag releases publish a versioned `windows-x64-portable.zip` plus a SHA-256 checksum; replacement is always an explicit download-and-extract action.
+
+## Updates and Portable releases
+
+The app checks the latest stable GitHub Release at most once per day. Use **Settings > Automatically Check for Updates** to disable or re-enable checks, or **Check for Updates** to run one manually. An available update can open the official Portable release, be deferred for three days or one week, or dismissed until the next day. Tag releases publish a versioned `windows-x64-portable.zip` plus a SHA-256 checksum; replacement is always an explicit download-and-extract action.

@@ -13,9 +13,11 @@
 #include "model.h"
 #include "pe.h"
 #include "resource.h"
+#include "../update_checker.h"
 
 using mwfl::operator""_dip;
 namespace {
+mwfl_examples::UpdateChecker g_update_checker;
 std::filesystem::path InitialFolderFromCommandLine() {
     int count = 0;
     const auto arguments = std::unique_ptr<wchar_t*, decltype(&::LocalFree)>(
@@ -199,6 +201,9 @@ class MainWindow final : public mwfl::WindowBase {
         SetAppearance({});
         if (const auto initial = InitialFolderFromCommandLine(); !initial.empty())
             StartScan(initial, 100000);
+        g_update_checker.Attach(
+            GetHwnd(), {L"Folder Explorer", L"folder-explorer", MWFL_APP_VERSION,
+                        L"Software\\mwfl\\Examples\\FolderExplorer\\Updates"});
     }
     mwfl::EventResult OnCommand(const mwfl::CommandEvent& e) override {
         if (e.IsClicked(open_)) {
