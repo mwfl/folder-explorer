@@ -11,7 +11,7 @@ if(FOLDER_EXPLORER_USE_LOCAL_MWFL)
 else()
     FetchContent_Declare(mwfl
         GIT_REPOSITORY https://github.com/mwfl/mwfl.git
-        GIT_TAG 06e085c74a209574c292fbee6302ce3676120256)
+        GIT_TAG c5ac538aa04dfe89d9c5ddadc1ab890b667153b5)
     set(MWFL_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
     set(MWFL_BUILD_TESTS OFF CACHE BOOL "" FORCE)
     FetchContent_MakeAvailable(mwfl)
