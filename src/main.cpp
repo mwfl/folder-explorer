@@ -13,11 +13,11 @@
 #include "model.h"
 #include "pe.h"
 #include "resource.h"
-#include "../update_checker.h"
+#include <mwfl/app_support/update_checker.h>
 
 using mwfl::operator""_dip;
 namespace {
-mwfl_examples::UpdateChecker g_update_checker;
+mwfl::app_support::UpdateChecker g_update_checker;
 std::filesystem::path InitialFolderFromCommandLine() {
     int count = 0;
     const auto arguments = std::unique_ptr<wchar_t*, decltype(&::LocalFree)>(

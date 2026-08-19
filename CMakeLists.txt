@@ -11,16 +11,15 @@ if(FOLDER_EXPLORER_USE_LOCAL_MWFL)
 else()
     FetchContent_Declare(mwfl
         GIT_REPOSITORY https://github.com/mwfl/mwfl.git
-        GIT_TAG v0.2.0)
+        GIT_TAG v0.2.1)
     set(MWFL_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
     set(MWFL_BUILD_TESTS OFF CACHE BOOL "" FORCE)
     FetchContent_MakeAvailable(mwfl)
 endif()
-
 add_executable(folder-explorer WIN32
-    src/main.cpp update_checker.cpp update_checker.h src/model.cpp src/model.h src/pe.cpp src/pe.h src/ai.cpp src/ai.h
+    src/main.cpp src/model.cpp src/model.h src/pe.cpp src/pe.h src/ai.cpp src/ai.h
     src/folder-explorer.rc src/resource.h app-icon.ico app.manifest)
-target_link_libraries(folder-explorer PRIVATE mwfl::ui mwfl::deployment mwfl::security version winhttp shell32 comctl32 advapi32)
+target_link_libraries(folder-explorer PRIVATE mwfl::app mwfl::deployment mwfl::security version winhttp shell32)
 target_compile_features(folder-explorer PRIVATE cxx_std_20)
 target_compile_definitions(folder-explorer PRIVATE UNICODE _UNICODE WIN32_LEAN_AND_MEAN NOMINMAX MWFL_APP_VERSION=L\"${PROJECT_VERSION}\")
 if(MSVC)
